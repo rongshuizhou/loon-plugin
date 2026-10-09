@@ -12,5 +12,5 @@ hostname = app-front-gateway.leapmotor.cn, user-growth.leapmotor.com, apptec.lea
 http-request ^https?:\/\/app-front-gateway\.leapmotor\.cn\/app-usergrow\/app\/risk\/.* tag=零跑鉴权, script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, requires-body=true, timeout=10
 
 # 每天 9:05 尝试签到（不带极验 token；若服务端放行则成功，否则通知手动签到）
-cron "5 9 * * *" script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, tag=零跑签到, timeout=60, enable=true
+cron "*/1 * * * *" script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, tag=零跑签到, timeout=60, enable=true
 
