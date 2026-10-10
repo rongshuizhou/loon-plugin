@@ -75,6 +75,12 @@ function isCfChallenge(body) {
          /challenge-platform/.test(body);
 }
 
+function isMissionPage(body) {
+  // 正向确认：页面确实是已登录的签到页（而非错误页/半截页面），
+  // 才敢把"无领取链接"推断为"今日已领取"
+  return /每日登录奖励/.test(body) || /铜币/.test(body);
+}
+
 function cronMain() {
   var s = $persistentStore.read(KEY_AUTH);
   if (!s) {
@@ -100,14 +106,23 @@ function cronMain() {
       notify("V2EX 签到", "登录态失效", "请用 Safari 打开 V2EX 重新登录一次，脚本会自动重新抓取");
       return $done();
     }
+    if (code >= 300 && code < 400) {
+      // 签到页正常不应重定向：大概率被踢到登录页
+      notify("V2EX 签到", "登录态失效", "请用 Safari 打开 V2EX 重新登录一次，脚本会自动重新抓取");
+      return $done();
+    }
     if (body.length < 500) {
       notify("V2EX 签到", "签到页加载异常", "页面内容过短(HTTP " + code + ")，请稍后手动检查");
       return $done();
     }
     var m = body.match(/\/mission\/daily\/redeem\?once=(\d+)/);
     if (!m) {
-      // 已登录但无领取链接：今日已领取
-      notify("V2EX 签到", "今日已领取 ✅", "签到页未找到领取链接");
+      // 无领取链接：只有正向确认是正常的签到页，才推断为已领取；否则如实报未知，绝不误报成功
+      if (isMissionPage(body)) {
+        notify("V2EX 签到", "今日已领取 ✅", "签到页无领取链接");
+      } else {
+        notify("V2EX 签到", "状态未知", "签到页内容异常，请手动打开 V2EX 检查");
+      }
       return $done();
     }
     // 领取
