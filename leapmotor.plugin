@@ -1,15 +1,19 @@
-
 #!name=零跑签到
-#!desc=零跑汽车 App 签到状态播报：每天查签到状态、报连续天数、提醒手动签到与抽奖（极验滑块须人工完成）
+#!desc=零跑汽车 App 全自动签到：xfx 自动续期 + 每天定时签到（无极验字段），成功通知连续天数
 #!author=Muse
 #!icon=https://raw.githubusercontent.com/Orz-3/mini/master/Color/leapmotor.png
 
 [MITM]
-hostname = app-front-gateway.leapmotor.cn
+hostname = app-front-gateway.leapmotor.cn, appuser.leapmotor.cn
 
 [Script]
-# 抓取登录态：打开零跑 App 进签到页时触发，自动保存鉴权头（xfx-cdn-cross-node，会轮换）
+# 抓取登录态：打开零跑 App 进签到页时触发，自动保存鉴权头（xfx-cdn-cross-node）+ deviceId
 http-request ^https?:\/\/app-front-gateway\.leapmotor\.cn\/app-usergrow\/app\/risk\/.* tag=零跑鉴权, script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, requires-body=true, timeout=10
 
-# 每天 7:00 查询签到状态并通知：已签到报连续天数，未签到提醒打开 App 手滑签到
-cron "0 7 * * *" script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, tag=零跑签到, timeout=60, enable=true
+# 抓取刷新凭证：App 调用 getnewtokentoios 刷新 token 时触发，保存完整签名请求供 cron 重放续期
+# （实测：该接口不校验时间戳，旧签名请求重放仍可换新 xfx）
+http-request ^https?:\/\/appuser\.leapmotor\.cn\/app-user\/appuseroperate\/getnewtokentoios.* tag=零跑刷新凭证, script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, timeout=10
+
+# 每天 07:00 全自动签到：先重放刷新 xfx → 查状态 → 未签到则 sm_verify → signIn（不带极验字段）
+# 成功通知"今日签到成功 连续第 X 天"，失败则通知手动滑块
+cron "*/1 * * * *" script-path=https://raw.githubusercontent.com/rongshuizhou/loon-plugin/refs/heads/main/leapmotor_signin.js, tag=零跑签到, timeout=60, enable=true
